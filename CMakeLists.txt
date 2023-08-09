@@ -3,7 +3,10 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_C_STANDARD 11)
 project (Tinyhttpd++ CXX C)
 
-set(CMAKE_CXX_COMPILER gcc)
+SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb") # 定义Debug编译参数
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall") # 定义Release编译参数
+
+set(CMAKE_CXX_COMPILER g++)
 add_executable (C_Tinyhttpd "src/httpd.c")
 add_executable (C_TinyhttpdClient "src/simpleclient.c")
 

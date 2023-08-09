@@ -44,7 +44,8 @@ void unimplemented(int);
  * Parameters: the socket connected to the client */
  /**********************************************************************/
 void accept_request(void* arg) {
-	int client = (intptr_t)arg;	// 通信套接字
+	// int client = (intptr_t)arg;		// ==========================> 这是原作者写的，但intptr_t是指针吧？不用解引用还能用？
+	int client = *(int*)arg;	// 通信套接字
 	int cgi = 0;				// CGI标志位，如果判断为CGI标准通信则为true(1)
 
 	// 从套接字中接收一行字符(该字符以\0结尾)
@@ -111,6 +112,7 @@ void accept_request(void* arg) {
 		strcat(path, "index.html");
 	}
 	// 判断文件是否可读
+	// 这里作者有大缺陷，当没有进入可执行文件当前目录执行可执行文件的话会找不到资源
 	if (stat(path, &st) == -1) {
 		// 如果文件读取失败->文件不存在/无权限读取/路径错误/系统错误，清空套接字缓冲区，并且给客户端回应404
 		// 清空套接字缓冲区很重要，它会影响TCP连接的断开，如果缓冲区存在数据，客户端可能会收到RST报文为不是FIN报文
@@ -398,19 +400,20 @@ int main(void) {
 
 	server_sock = startup(&port);	// 创建监听
 	printf("Tinyhttpd++ running on port %d.\n", port);
-	char cIP[32];
+
+	char cIP[32] = { 0 };
 	unsigned short cPort = 0;
 	// 循环通信
 	while (1) {
-		printf("==1==\n");
 		client_sock = accept(server_sock, (struct sockaddr*)&client_name, &client_name_len);
 		if (client_sock == -1) {
 			error_die("accept");
 		}
-		printf("==2==\n");
-		inet_ntop(AF_INET, client_name.sin_addr.s_addr, cIP, sizeof(cIP));
+		// 输出客户端信息
+		inet_ntop(AF_INET, &client_name.sin_addr.s_addr, cIP, sizeof(cIP));
 		cPort = ntohs(client_name.sin_port);
-		printf("A client %s:%d connected.", cIP, cPort);
+		printf("A client %s:%d is connected.\n", cIP, cPort);
+		// 进行通信
 		accept_request(&client_sock);
 	}
 

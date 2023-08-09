@@ -129,7 +129,7 @@ void accept_request(void* arg) {
 			serve_file(client, path);
 		}
 		else {
-			// 对于CGI请求，直接使用HTTP常规回应
+			// 对于CGI请求，调用CGI脚本
 			execute_cgi(client, path, method, query_string);
 		}
 	}
@@ -210,12 +210,12 @@ void execute_cgi(int client, const char* path,
 	pid_t pid;
 	int status;
 
-	// 创建输出管道
+	// 创建管道：父 <- 子
 	if (pipe(cgi_output) < 0) {
 		cannot_execute(client);
 		return;
 	}
-	// 创建输入管道
+	// 创建管道：父 -> 子
 	if (pipe(cgi_input) < 0) {
 		cannot_execute(client);
 		return;
@@ -231,14 +231,16 @@ void execute_cgi(int client, const char* path,
 
 	char c;
 	if (pid == 0) {	// 子进程执行
+		close(cgi_output[0]);	// 关闭子进程对cgi_output的读操作
+		close(cgi_input[1]);	// 关闭子进程对cgi_input的写操作
+		dup2(cgi_output[1], STDOUT);	// 将子进程的标准输入输出重定向到父进程中
+		dup2(cgi_input[0], STDIN);
+
+		// 这下面调用执行了CGI脚本，理论上你可以改成你想做的
+		// 设置CGI脚本所需的环境变量
 		char meth_env[255];
 		char query_env[255];
 		char length_env[255];
-
-		dup2(cgi_output[1], STDOUT);
-		dup2(cgi_input[0], STDIN);
-		close(cgi_output[0]);
-		close(cgi_input[1]);
 		sprintf(meth_env, "REQUEST_METHOD=%s", method);
 		putenv(meth_env);
 		if (strcasecmp(method, "GET") == 0) {
@@ -250,19 +252,22 @@ void execute_cgi(int client, const char* path,
 			putenv(length_env);
 		}
 		execl(path, NULL);
+
 		exit(0);
 	}
 	else {	// 父进程执行
-		close(cgi_output[1]);
-		close(cgi_input[0]);
-		if (strcasecmp(method, "POST") == 0)
+		close(cgi_output[1]);	// 关闭父进程对cgi_output的写操作
+		close(cgi_input[0]);	// 关闭父进程对cgi_input的读操作
+		if (strcasecmp(method, "POST") == 0) {
 			for (int i = 0; i < content_length; i++) {
-				recv(client, &c, 1, 0);
-				write(cgi_input[1], &c, 1);
+				recv(client, &c, 1, 0);		// 从通信套接字中接收一个字符
+				write(cgi_input[1], &c, 1);	// 将这个字符通过管道传递给子进程
 			}
-		while (read(cgi_output[0], &c, 1) > 0)
+		}
+		// 循环从管道中接收子进程传递的数据，并回应客户端
+		while (read(cgi_output[0], &c, 1) > 0) {
 			send(client, &c, 1, 0);
-
+		}
 		close(cgi_output[0]);
 		close(cgi_input[1]);
 		waitpid(pid, &status, 0);

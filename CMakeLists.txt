@@ -7,8 +7,7 @@ SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb") # 定义Debug编
 SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall") # 定义Release编译参数
 
 set(CMAKE_CXX_COMPILER g++)
-add_executable (C_Tinyhttpd "src/httpd.c")
-add_executable (C_TinyhttpdClient "src/simpleclient.c")
+add_executable (C_Tinyhttpd "src/edited_httpd.c")
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/app/)
 

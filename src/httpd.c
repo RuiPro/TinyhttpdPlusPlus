@@ -44,7 +44,10 @@ void unimplemented(int);
  * Parameters: the socket connected to the client */
  /**********************************************************************/
 void accept_request(void* arg) {
-	// int client = (intptr_t)arg;		// ==========================> 这是原作者写的，但intptr_t是指针吧？不用解引用还能用？
+	// 下面这句这是原作者写的
+	// 但intptr_t是指针吧？直接将指针赋值给int？不用解引用还能用？
+	// int client = (intptr_t)arg;		
+	
 	int client = *(int*)arg;	// 通信套接字
 	int cgi = 0;				// CGI标志位，如果判断为CGI标准通信则为true(1)
 
@@ -70,7 +73,7 @@ void accept_request(void* arg) {
 	if (strcasecmp(method, "GET") && strcasecmp(method, "POST")) {
 		// 当HTTP方法既不为GET又不为POST时，给客户端回应501
 		unimplemented(client);
-		return;		// ====================================================>为什么这里不用清空缓冲区？也不用close(socket_fd)？
+		return;		// ====================================================> 为什么这里不用清空缓冲区？也不用close(socket_fd)？
 	}
 	if (strcasecmp(method, "POST") == 0) cgi = 1;
 
@@ -112,7 +115,8 @@ void accept_request(void* arg) {
 		strcat(path, "index.html");
 	}
 	// 判断文件是否可读
-	// 这里作者有大缺陷，当没有进入可执行文件当前目录执行可执行文件的话会找不到资源
+	// 这里作者有大缺陷，当没有进入可执行文件当前目录去执行可执行文件的话会找不到资源
+	// 正确的做法是老老实实地去使用绝对路径
 	if (stat(path, &st) == -1) {
 		// 如果文件读取失败->文件不存在/无权限读取/路径错误/系统错误，清空套接字缓冲区，并且给客户端回应404
 		// 清空套接字缓冲区很重要，它会影响TCP连接的断开，如果缓冲区存在数据，客户端可能会收到RST报文为不是FIN报文
@@ -200,7 +204,7 @@ void execute_cgi(int client, const char* path,
 		}
 		if (content_length == -1) {
 			bad_request(client);
-			return;		// ====================================================>为什么这里不用close(socket_fd)？
+			return;		// ====================================================> 为什么这里又不用close(socket_fd)？
 		}
 	}
 	else{
@@ -227,7 +231,7 @@ void execute_cgi(int client, const char* path,
 		cannot_execute(client);
 		return;
 	}
-	// 给客户端回应200 OK ====================================================>为什么要在fork()之后回应？是否会导致回应重复？
+	// 给客户端回应200 OK ====================================================> 为什么要在fork()之后回应？是否会导致回应重复？
 	sprintf(buf, "HTTP/1.0 200 OK\r\n");	
 	send(client, buf, strlen(buf), 0);
 
@@ -421,6 +425,7 @@ int main(void) {
 	return(0);
 }
 
+// 这些函数的命名方式非常不好
 /*******************************HTTP 400*************************************/
 void bad_request(int client) {
 	char buf[1024];
@@ -454,7 +459,7 @@ void cannot_execute(int client) {
 /*******************************HTTP 200*************************************/
 void headers(int client, const char* filename) {
 	char buf[1024];
-	// 作者提示你可以使用filename来确定文件类型
+	// 作者提示你或许可以使用filename来判断文件类型
 	// (void)filename是为了让编译器不报参数未使用的警告
 	(void)filename;  /* could use filename to determine file type */
 

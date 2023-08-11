@@ -47,7 +47,7 @@ void accept_request(void* arg) {
 	// 下面这句这是原作者写的
 	// 但intptr_t是指针吧？直接将指针赋值给int？不用解引用还能用？
 	// int client = (intptr_t)arg;		
-	
+
 	int client = *(int*)arg;	// 通信套接字
 	int cgi = 0;				// CGI标志位，如果判断为CGI标准通信则为true(1)
 
@@ -207,7 +207,7 @@ void execute_cgi(int client, const char* path,
 			return;		// ====================================================> 为什么这里又不用close(socket_fd)？
 		}
 	}
-	else{
+	else {
 		// 其他请求方式的实现
 	}
 
@@ -226,14 +226,17 @@ void execute_cgi(int client, const char* path,
 		cannot_execute(client);
 		return;
 	}
+	printf("[DEBUG] pid %d to fork()\n", getpid());
 	// 创建子进程
 	if ((pid = fork()) < 0) {
 		cannot_execute(client);
 		return;
 	}
 	// 给客户端回应200 OK ====================================================> 为什么要在fork()之后回应？是否会导致回应重复？
-	sprintf(buf, "HTTP/1.0 200 OK\r\n");	
-	send(client, buf, strlen(buf), 0);
+	// 经过抓包和debug查看，确实是多发了一次。只不过单个HTTP/1.0 200 OK\r\n不符合HTTP规范，被忽略了
+	sprintf(buf, "HTTP/1.0 200 OK\r\n");
+	int res = send(client, buf, strlen(buf), 0);
+	printf("[DEBUG] pid %d has send %d bytes data.\n", getpid(), res);
 
 	char c;
 	if (pid == 0) {	// 子进程执行

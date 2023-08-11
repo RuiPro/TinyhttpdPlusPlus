@@ -1,6 +1,6 @@
 ### Tinyhttpd++(施工中)
 
-本项目模型来自Tinyhttpd
+本项目复刻自Tinyhttpd
 
 >**Tinyhttpd**
 >
@@ -15,7 +15,3 @@
 项目源文件：
 httpd.c、simpleclient.c	原作者的代码
 edited_httpd.c、edited_simpleclient.c	本人注释和修改过后的代码(适合阅读)
-
-计划：
-- [ ] 完善服务端，修改bug
-- [ ] 使用C++11和OOP对其进行封装，更易于使用
